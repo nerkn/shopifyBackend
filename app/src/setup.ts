@@ -1,5 +1,5 @@
 import { yoga } from "@elysiajs/graphql-yoga";
-import { resolvers } from "./data/resolvers";
+import { preparedQueries, resolvers } from "./data/resolvers";
 import { schemaDefs } from "./data/schema";
 import { Database } from "bun:sqlite";
 import { checkAndCreateDatabase } from "./data/mock";
@@ -13,6 +13,7 @@ const server = yoga({
   context: {
     db,
     defaultTake: 20,
+    preparedQueries: preparedQueries(db),
   },
 });
 export { db, server };

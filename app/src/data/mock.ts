@@ -1,88 +1,41 @@
 import Database from "bun:sqlite";
-import { Customer, Product, Shop } from "./types";
+import { Customer, Order, Product, ProductVariant, Shop } from "./types";
 import { Ulid } from "id128";
+/** product ids 10010 - 10013 */
+import { products } from "./mocks/products";
+/** productVariant ids  1 - 3 */
+import { productVariants } from "./mocks/productVariants";
+import { createTables } from "./mocks/createTables";
+import { customers } from "./mocks/customers";
+import { orders } from "./mocks/orders";
 
-export const data: { customers: Customer[]; products: Product[]; shop: Shop } =
-  {
-    customers: [
-      {
-        id: Ulid.generate().toCanonical(),
-        name: "John Doe",
-        email: "john.doe@example.com",
-      },
-      {
-        id: Ulid.generate().toCanonical(),
-        name: "Jane Smith",
-        email: "jane.smith@example.com",
-      },
-      {
-        id: Ulid.generate().toCanonical(),
-        name: "Bob Johnson",
-        email: "Bob@john.com",
-      },
-      {
-        id: Ulid.generate().toCanonical(),
-        name: "Sally Sue",
-        email: "sally@sue.com",
-      },
-    ],
-    products: [
-      {
-        id: Ulid.generate().toCanonical(),
-        title: "The Best Product",
-        price: 9.99,
-        description: "The best product in the world",
-      },
-      {
-        id: Ulid.generate().toCanonical(),
-        title: "Shoe",
-        price: 8.99,
-        description: "The shoe  product in the world",
-      },
-      {
-        id: Ulid.generate().toCanonical(),
-        title: "The Dress",
-        price: 7.99,
-        description: "The third dress product in the world",
-      },
-      {
-        id: Ulid.generate().toCanonical(),
-        title: "Eyeliner",
-        price: 26.99,
-        description: "For the best eyes in the world",
-      },
-    ],
-    shop: {
-      id: Ulid.generate().toCanonical(),
-      name: "The Shoe Shop",
-      domain: "theshoeshop.com",
-    },
-  };
-
-const createTables = `
-    CREATE TABLE IF NOT EXISTS customers (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        email TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS products (
-        id TEXT PRIMARY KEY,
-        title TEXT NOT NULL,
-        price REAL NOT NULL,
-        description TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS shop (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        domain TEXT NOT NULL
-    );
-    `;
+export const data: {
+  customers: Customer[];
+  products: Product[];
+  shop: Shop;
+  orders: Order[];
+  productVariants: ProductVariant[];
+} = {
+  products: products,
+  productVariants: productVariants,
+  customers: customers,
+  shop: {
+    id: "101",
+    name: "The Shoe Shop",
+    domain: "theshoeshop.com",
+  },
+  orders: orders,
+};
 
 function createDatabase(db: Database) {
-  let tableCreation = db.query(createTables);
-  tableCreation.run();
+  createTables.split(";").forEach((query) => {
+    console.log("creating");
+    console.log("creating", query.trim());
+    if (query.trim()) db.run(query);
+  });
+
   data.customers.forEach((customer) => {
-    console.log(customer.name);
+    console.log("inserting customer", customer);
     db.run(`INSERT INTO customers (id, name, email) VALUES (?, ?, ?)`, [
       customer.id,
       customer.name,
@@ -90,9 +43,64 @@ function createDatabase(db: Database) {
     ]);
   });
   data.products.forEach((product) => {
+    try {
+      console.log("inserting product", product);
+      db.run(
+        `INSERT INTO products (id, title, handle, price, description, descriptionHtml, availableForSale, createdAt, updatedAt, publishedAt, vendor, productType, featuredImage, isGiftCard, onlineStoreUrl, totalInventory, requiresSellingPlan
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          product.id,
+          product.title,
+          product.handle,
+          product.price,
+          product.description,
+          product.descriptionHtml,
+          product.availableForSale,
+          product.createdAt,
+          product.updatedAt,
+          product.publishedAt,
+          product.vendor,
+          product.productType,
+          product.featuredImage,
+          product.isGiftCard,
+          product.onlineStoreUrl,
+          product.totalInventory,
+          product.requiresSellingPlan,
+        ]
+      );
+    } catch (e) {
+      console.log("error", e);
+    }
+  });
+  data.productVariants.forEach((productVariant) => {
     db.run(
-      `INSERT INTO products (id, title, price, description) VALUES (?, ?, ?, ?)`,
-      [product.id, product.title, product.price, product.description]
+      `INSERT INTO productVariants (id, title, price, product,barcode,
+        sku, availableForSale, requiresShipping, taxable, weight, weightUnit, image, inventoryQuantity, inventoryManagement, inventoryPolicy, compareAtPrice, position, fulfillmentService, createdAt, updatedAt, presentmentPrices, sellingPlanAllocations
+         ) VALUES (?, ?, ?, ?, ?, ?,  ?, ?  , ?, ?,  ?, ?,  ?, ?,  ?, ?,  ?, ?,  ?, ?,  ?, ?)`,
+      [
+        productVariant.id,
+        productVariant.title,
+        productVariant.price,
+        productVariant.product,
+        productVariant.barcode,
+        productVariant.sku,
+        productVariant.availableForSale,
+        productVariant.requiresShipping,
+        productVariant.taxable,
+        productVariant.weight,
+        productVariant.weightUnit,
+        productVariant.image || "",
+        productVariant.inventoryQuantity,
+        productVariant.inventoryManagement,
+        productVariant.inventoryPolicy,
+        productVariant.compareAtPrice,
+        productVariant.position,
+        productVariant.fulfillmentService,
+        productVariant.createdAt,
+        productVariant.updatedAt,
+        productVariant.presentmentPrices,
+        productVariant.sellingPlanAllocations,
+      ]
     );
   });
   db.run(`INSERT INTO shop (id, name, domain) VALUES (?, ?, ?)`, [
@@ -103,11 +111,11 @@ function createDatabase(db: Database) {
 }
 export function checkAndCreateDatabase(db: Database) {
   try {
-    let query = db.query(`SELECT * FROM customers limit 1`);
+    let query = db.query(`SELECT * FROM Image limit 1`);
     console.log("db exists");
-    console.log("example gen ulid:", Ulid.generate().toCanonical());
+    console.log("example gen ulid:", "100");
   } catch (e) {
-    console.log(e);
+    console.log("populating db");
     createDatabase(db);
   }
 }

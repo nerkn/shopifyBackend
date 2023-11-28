@@ -9,6 +9,7 @@
     "@elysiajs/graphql-yoga": "^0.7.1",
     "@graphql-tools/schema": "^10.0.2",
     "elysia": "latest",
+    "graphql-parse-resolve-info": "^4.13.0",
     "graphql-yoga": "^5.0.0",
     "id128": "^1.6.6"
   },
